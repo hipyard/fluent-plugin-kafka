@@ -16,6 +16,8 @@ class Fluent::KafkaOutputBuffered < Fluent::BufferedOutput
   config_param :output_include_tag, :bool, :default => false
   config_param :output_include_time, :bool, :default => false
   config_param :kafka_agg_max_bytes, :size, :default => 4*1024  #4k
+  config_param :topic_property, :string, :default => 'topic'
+  config_param :delete_topic_property, :bool, :default => false
 
   # poseidon producer options
   config_param :max_send_retries, :integer, :default => 3
@@ -140,7 +142,11 @@ class Fluent::KafkaOutputBuffered < Fluent::BufferedOutput
       chunk.msgpack_each { |tag, time, record|
         record['time'] = time if @output_include_time
         record['tag'] = tag if @output_include_tag
-        topic = record['topic'] || @default_topic || tag
+
+        topic = record[@topic_property] || @default_topic || tag
+
+        record.delete(@topic_property) if @delete_topic_property
+
         partition_key = record['partition_key'] || @default_partition_key
 
         records_by_topic[topic] ||= 0
